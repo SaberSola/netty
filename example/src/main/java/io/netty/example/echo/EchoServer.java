@@ -49,18 +49,19 @@ public final class EchoServer {
         }
 
         // Configure the server.
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
-        final EchoServerHandler serverHandler = new EchoServerHandler();
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);  // 创建boss线程组 用于接受client 链接
+        EventLoopGroup workerGroup = new NioEventLoopGroup();          //创建 worker线程组 用于SocketChannel的读写
+        final EchoServerHandler serverHandler = new EchoServerHandler(); //创建一个InbandHandler
         try {
+            //创建服务端启动器
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
-             .channel(NioServerSocketChannel.class)
-             .option(ChannelOption.SO_BACKLOG, 100)
-             .handler(new LoggingHandler(LogLevel.INFO))
+            b.group(bossGroup, workerGroup)       //设置要启动的loopgroup
+             .channel(NioServerSocketChannel.class)  //创建要被实例化的channel为 NioServerSocketChannel
+             .option(ChannelOption.SO_BACKLOG, 100) //设置NioServerSocketChannel的可选项目
+             .handler(new LoggingHandler(LogLevel.INFO))  //设置NioServerSocketChannel的处理器
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
-                 public void initChannel(SocketChannel ch) throws Exception {
+                 public void initChannel(SocketChannel ch) throws Exception {   // 设置连入服务端的 Client 的 SocketChannel 的处理器
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
                          p.addLast(sslCtx.newHandler(ch.alloc()));
@@ -71,9 +72,11 @@ public final class EchoServer {
              });
 
             // Start the server.
+            // 绑定端口，并同步等待成功，即启动服务端
             ChannelFuture f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
+            // 监听服务端关闭，并阻塞等待
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.

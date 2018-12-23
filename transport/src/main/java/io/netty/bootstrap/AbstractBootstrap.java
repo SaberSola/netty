@@ -49,13 +49,13 @@ import java.util.Map;
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
-    volatile EventLoopGroup group;
+    volatile EventLoopGroup group;        //EventLoopGroup对象
     @SuppressWarnings("deprecation")
-    private volatile ChannelFactory<? extends C> channelFactory;
-    private volatile SocketAddress localAddress;
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
-    private volatile ChannelHandler handler;
+    private volatile ChannelFactory<? extends C> channelFactory;  //channle 工厂 用于创建channel对象
+    private volatile SocketAddress localAddress;                  //本地地址
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();  //可选操作集合
+    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();     //属性集合
+    private volatile ChannelHandler handler;                    //处理器
 
     AbstractBootstrap() {
         // Disallow extending from a different package.
@@ -77,6 +77,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * The {@link EventLoopGroup} which is used to handle all the events for the to-be-created
      * {@link Channel}
+     * 把EventLoopGroup 设置到自己种
      */
     public B group(EventLoopGroup group) {
         if (group == null) {
@@ -90,7 +91,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     @SuppressWarnings("unchecked")
-    private B self() {
+    private B self() {    //返回自己
         return (B) this;
     }
 
@@ -103,7 +104,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
         }
-        return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
+        return channelFactory(new ReflectiveChannelFactory<C>(channelClass));//传入的channel 会被ReflectiveChannelFactory 转化为Factory
     }
 
     /**
@@ -236,13 +237,17 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     /**
      * Create a new {@link Channel} and bind it.
+     * 异步绑定接口
      */
     public ChannelFuture bind() {
+        //校验服务参数
         validate();
+        //获取本地地址
         SocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             throw new IllegalStateException("localAddress not set");
         }
+        //绑定本地资地址
         return doBind(localAddress);
     }
 
@@ -250,7 +255,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(int inetPort) {
-        return bind(new InetSocketAddress(inetPort));
+        return bind(new InetSocketAddress(inetPort)); //绑定端口
     }
 
     /**
