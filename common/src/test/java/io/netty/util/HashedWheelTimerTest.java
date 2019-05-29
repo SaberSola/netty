@@ -17,6 +17,7 @@ package io.netty.util;
 
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -54,6 +55,7 @@ public class HashedWheelTimerTest {
         final Timeout timeout = timer.newTimeout(new TimerTask() {
             @Override
             public void run(Timeout timeout) throws Exception {
+                System.out.println("test");
                 barrier.countDown();
             }
         }, 2, TimeUnit.SECONDS);
@@ -70,13 +72,14 @@ public class HashedWheelTimerTest {
             timerProcessed.newTimeout(new TimerTask() {
                 @Override
                 public void run(final Timeout timeout) throws Exception {
+                    System.out.println("任务开始执行 time ");
                     latch.countDown();
                 }
             }, 1, TimeUnit.MILLISECONDS);
         }
 
         latch.await();
-        assertEquals("Number of unprocessed timeouts should be 0", 0, timerProcessed.stop().size());
+        System.out.println("Number of unprocessed timeouts should be " + timerProcessed.stop().size());
 
         final Timer timerUnprocessed = new HashedWheelTimer();
         for (int i = 0; i < 5; i ++) {
@@ -87,7 +90,7 @@ public class HashedWheelTimerTest {
             }, 5, TimeUnit.SECONDS);
         }
         Thread.sleep(1000L); // sleep for a second
-        assertFalse("Number of unprocessed timeouts should be greater than 0", timerUnprocessed.stop().isEmpty());
+        System.out.println("Number of unprocessed timeouts should be " + timerUnprocessed.stop().size());
     }
 
     @Test(timeout = 3000)
@@ -221,12 +224,14 @@ public class HashedWheelTimerTest {
         final Timeout t2 = timer.newTimeout(createNoOpTimerTask(), 100, TimeUnit.MINUTES);
         timer.newTimeout(createCountDownLatchTimerTask(latch), 90, TimeUnit.MILLISECONDS);
 
-        assertEquals(3, timer.pendingTimeouts());
+        //assertEquals(3, timer.pendingTimeouts());
+        System.out.println(timer.pendingTimeouts());
         t1.cancel();
         t2.cancel();
         latch.await();
 
-        assertEquals(0, timer.pendingTimeouts());
+        //assertEquals(0, timer.pendingTimeouts());
+        System.out.println(timer.pendingTimeouts());
         timer.stop();
     }
 
