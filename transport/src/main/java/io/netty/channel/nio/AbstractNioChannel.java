@@ -383,7 +383,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
-                selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
+                selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this); //选择selector
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {

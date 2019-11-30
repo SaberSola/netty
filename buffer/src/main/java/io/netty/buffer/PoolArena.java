@@ -31,7 +31,7 @@ import static java.lang.Math.max;
 abstract class PoolArena<T> implements PoolArenaMetric {
     static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
-    enum SizeClass {
+    enum SizeClass { //缓存大小
         Tiny,
         Small,
         Normal
@@ -41,17 +41,24 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     final PooledByteBufAllocator parent;
 
-    private final int maxOrder;
-    final int pageSize;
-    final int pageShifts;
-    final int chunkSize;
-    final int subpageOverflowMask;
-    final int numSmallSubpagePools;
+    private final int maxOrder;  //chunk中由page构成二叉树的最大高度 默认11
+    final int pageSize;          // 默认8K
+    final int pageShifts;        // pageShifts=log(pageSize),默认13
+    final int chunkSize;         // chunk的大小
+    final int subpageOverflowMask; //该变量用于判断申请的内存大小与page之间的关系，是大于，还是小于
+
+    final int numSmallSubpagePools; //用来分配small内存的数组长度
+
+    /*
+      tinySubpagePools来缓存（或说是存储）用来分配tiny（小于512）内存的Page；
+      smallSubpagePools来缓存用来分配small（大于等于512且小于pageSize）内存的Page
+      */
     final int directMemoryCacheAlignment;
     final int directMemoryCacheAlignmentMask;
     private final PoolSubpage<T>[] tinySubpagePools;
     private final PoolSubpage<T>[] smallSubpagePools;
 
+    //用来存储用来分配给Normal（超过一页）大小内存的PoolChunk。
     private final PoolChunkList<T> q050;
     private final PoolChunkList<T> q025;
     private final PoolChunkList<T> q000;
@@ -141,9 +148,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     abstract boolean isDirect();
 
+    //分配内存
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
-        PooledByteBuf<T> buf = newByteBuf(maxCapacity);
-        allocate(cache, buf, reqCapacity);
+        PooledByteBuf<T> buf = newByteBuf(maxCapacity);//先创建一个PooledByteBuf
+        allocate(cache, buf, reqCapacity);//分配内存
         return buf;
     }
 
@@ -171,6 +179,13 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return (normCapacity & 0xFFFFFE00) == 0;
     }
 
+    /**
+     *
+     * @param cache  PoolThreadCache
+     * @param buf    PooledByteBuf
+     * @param reqCapacity 大小
+     * @Desc  分配内存
+     */
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
         final int normCapacity = normalizeCapacity(reqCapacity);
         if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
@@ -329,6 +344,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return table[tableIdx];
     }
 
+    /**
+     * 先对reqCapacity进行处理，
+     * 将reqCapacity转换成一个合适的容量tiny，small内存，tiny内存为16,32,48,到512，tiny内存为[0,512),
+     * 而small内存为1024,2048，4096成倍增长，直到(pageSize-1)
+     */
     int normalizeCapacity(int reqCapacity) {
         if (reqCapacity < 0) {
             throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");

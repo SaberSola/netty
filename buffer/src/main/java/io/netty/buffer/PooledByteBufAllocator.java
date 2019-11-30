@@ -33,22 +33,26 @@ import java.util.List;
 public class PooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
-    private static final int DEFAULT_NUM_HEAP_ARENA;
-    private static final int DEFAULT_NUM_DIRECT_ARENA;
+    private static final int DEFAULT_NUM_HEAP_ARENA; //默认的PoolArena个数，堆内存类型
 
-    private static final int DEFAULT_PAGE_SIZE;
-    private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
-    private static final int DEFAULT_TINY_CACHE_SIZE;
-    private static final int DEFAULT_SMALL_CACHE_SIZE;
-    private static final int DEFAULT_NORMAL_CACHE_SIZE;
-    private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+    private static final int DEFAULT_NUM_DIRECT_ARENA;//默认的PoolArena个数，直接内存类型
+
+    private static final int DEFAULT_PAGE_SIZE;  //page size
+    private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk 由于每个chunk中的page是用平衡二叉树映射管理每个PoolSubpage是否被分配，
+    // maxOrder为树的深度，深度为maxOrder层的节点数量为 1 << maxOrder。
+
+    private static final int DEFAULT_TINY_CACHE_SIZE; //默认的tiny cache 的大小 512
+    private static final int DEFAULT_SMALL_CACHE_SIZE; //256
+    private static final int DEFAULT_NORMAL_CACHE_SIZE;//默认的normal cache的大小 64
+
+    private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY; //
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
     private static final boolean DEFAULT_USE_CACHE_FOR_ALL_THREADS;
     private static final int DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT;
     static final int DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK;
 
-    private static final int MIN_PAGE_SIZE = 4096;
-    private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
+    private static final int MIN_PAGE_SIZE = 4096; //page 最小值 4K
+    private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2); //最大chunk的大小，等于2的30次方，即1G。
 
     static {
         int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);
@@ -150,9 +154,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     public static final PooledByteBufAllocator DEFAULT =
             new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
-    private final PoolArena<byte[]>[] heapArenas;
-    private final PoolArena<ByteBuffer>[] directArenas;
-    private final int tinyCacheSize;
+    private final PoolArena<byte[]>[] heapArenas; //堆内存area
+    private final PoolArena<ByteBuffer>[] directArenas;//直接内存
+    private final int tinyCacheSize;//
     private final int smallCacheSize;
     private final int normalCacheSize;
     private final List<PoolArenaMetric> heapArenaMetrics;
@@ -205,6 +209,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                 useCacheForAllThreads, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
+    //初始化
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                                   boolean useCacheForAllThreads, int directMemoryCacheAlignment) {
@@ -305,14 +310,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return chunkSize;
     }
 
+    //池内存分配
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        PoolThreadCache cache = threadCache.get();
+        PoolThreadCache cache = threadCache.get();//线程的分配缓冲区，理解为一个TheadLocal变量，为了提高并发减少锁竞争。由于第一次分配时，线程本地缓存池目前为空
         PoolArena<byte[]> heapArena = cache.heapArena;
 
         final ByteBuf buf;
-        if (heapArena != null) {
-            buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
+        if (heapArena != null) {// heapArena == null
+            buf = heapArena.allocate(cache, initialCapacity, maxCapacity);//进入到PoolArena.allocate方法去分配
         } else {
             buf = PlatformDependent.hasUnsafe() ?
                     new UnpooledUnsafeHeapByteBuf(this, initialCapacity, maxCapacity) :
@@ -431,6 +437,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         threadCache.remove();
     }
 
+    //PoolThreadLocalCache
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final boolean useCacheForAllThreads;
 

@@ -460,7 +460,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+        public final void register(EventLoop eventLoop, final ChannelPromise promise) { //注册Channel
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
@@ -497,7 +497,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private void register0(ChannelPromise promise) {
+        private void register0(ChannelPromise promise) { //注册Channel
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop
@@ -505,7 +505,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
-                doRegister();
+                doRegister();//注册Channel
                 neverRegistered = false;
                 registered = true;
 
